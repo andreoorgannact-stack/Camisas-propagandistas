@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Camisas - Propagandistas</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f4f3ef;
+    --surface: #ffffff;
+    --border: #dddbd4;
+    --border-light: #eceae3;
+    --text: #1a1917;
+    --text-muted: #6b6960;
+    --text-hint: #9e9c95;
+    --accent: #1a6b4a;
+    --accent-light: #e8f4ef;
+    --accent-dark: #124d35;
+    --danger: #c0392b;
+    --danger-light: #fdf0ee;
+    --info-bg: #eef4fb;
+    --info-text: #1a4a7a;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+  }
+
+  body {
+    font-family: 'Georgia', serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 2rem 1rem 4rem;
+  }
+
+  .page-wrap { max-width: 680px; margin: 0 auto; }
+
+  header {
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header h1 {
+    font-size: 1.6rem;
+    font-weight: normal;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin-bottom: 0.4rem;
+  }
+
+  header p {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    font-family: 'Arial', sans-serif;
+    line-height: 1.6;
+  }
+
+  .section-label {
+    font-family: 'Arial', sans-serif;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-hint);
+    margin-bottom: 0.75rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    margin-bottom: 1rem;
+  }
+
+  .field { margin-bottom: 1.1rem; }
+  .field:last-child { margin-bottom: 0; }
+
+  .field label {
+    display: block;
+    font-family: 'Arial', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+  }
+
+  .field input[type="text"],
+  .field input[type="date"],
+  .field select {
+    width: 100%;
+    padding: 0.6rem 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    font-family: 'Arial', sans-serif;
+    color: var(--text);
+    background: var(--surface);
+    transition: border-color 0.15s;
+    outline: none;
+  }
+
+  .field input:focus, .field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,107,74,0.1); }
+  .field input.invalid, .field select.invalid { border-color: var(--danger); background: var(--danger-light); }
+
+  .error-msg {
+    font-family: 'Arial', sans-serif;
+    font-size: 0.75rem;
+    color: var(--danger);
+    margin-top: 0.3rem;
+    display: none;
+  }
+
+  .prop-row {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.1rem 1.25rem;
+    margin-bottom: 0.75rem;
+    box-shadow: var(--shadow);
+  }
+
+  .prop-row-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.85rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .prop-badge { display: flex; align-items: center; gap: 0.5rem; }
+
+  .prop-num {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: var(--accent-light);
+    color: var(--accent-dark);
+    font-family: 'Arial', sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .prop-title {
+    font-family: 'Arial', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .btn-remove-prop {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 0.25rem 0.6rem;
+    cursor: pointer;
+    font-size: 1rem;
+    color: var(--text-hint);
+    line-height: 1;
+    transition: all 0.15s;
+  }
+  .btn-remove-prop:hover { background: var(--danger-light); border-color: var(--danger); color: var(--danger); }
+
+  .prop-fields .field { margin-bottom: 0.9rem; }
+  .prop-fields .field:last-child { margin-bottom: 0; }
+
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 0.9rem;
+  }
+  .field-grid .field { margin-bottom: 0; min-width: 0; }
+
+  .btn-add-prop {
+    width: 100%;
+    display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    background: none;
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 0.9rem;
+    cursor: pointer;
+    font-family: 'Arial', sans-serif;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+    transition: all 0.15s;
+  }
+  .btn-add-prop:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+  .btn-submit {
+    width: 100%;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    padding: 0.95rem;
+    font-family: 'Arial', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn-submit:hover { background: var(--accent-dark); }
+  .btn-submit:active { transform: scale(0.99); }
+  .btn-submit:disabled { background: var(--text-hint); cursor: not-allowed; }
+
+  .info-box {
+    background: var(--info-bg);
+    border: 1px solid #c5d9ef;
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.5rem;
+    font-family: 'Arial', sans-serif;
+    font-size: 0.8rem;
+    color: var(--info-text);
+    line-height: 1.6;
+  }
+
+  .section-block { margin-bottom: 2rem; }
+
+  .success-screen {
+    display: none;
+    text-align: center;
+    padding: 3rem 1rem;
+  }
+
+  .success-icon {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: var(--accent-light);
+    color: var(--accent);
+    font-size: 2rem;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1.25rem;
+  }
+
+  .success-screen h2 {
+    font-size: 1.3rem;
+    font-weight: normal;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+  }
+
+  .success-screen p {
+    font-family: 'Arial', sans-serif;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+    max-width: 400px;
+    margin: 0 auto 1.5rem;
+  }
+
+  .btn-novo {
+    display: inline-block;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.7rem 1.5rem;
+    font-family: 'Arial', sans-serif;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-novo:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+  #btn-baixar-comprovante { margin-right: 0.6rem; }
+  @media (max-width: 480px) {
+    #btn-baixar-comprovante { display: block; width: 100%; margin: 0 0 0.6rem; }
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-banner {
+    display: none;
+    background: var(--danger-light);
+    border: 1px solid #e8b4b0;
+    border-radius: var(--radius-sm);
+    padding: 0.75rem 1rem;
+    margin-top: 1rem;
+    font-family: 'Arial', sans-serif;
+    font-size: 0.8rem;
+    color: var(--danger);
+    line-height: 1.6;
+  }
+
+  @media (max-width: 480px) {
+    body { padding: 1rem 0.75rem 3rem; }
+    header h1 { font-size: 1.3rem; }
+    .card, .prop-row { padding: 1rem; }
+    .field-grid { grid-template-columns: 1fr; gap: 0.9rem; }
+  }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <div id="form-section">
+    <header>
+      <h1>Camisas - Propagandistas</h1>
+      <p>Preencha os dados do coordenador, da distribuidora e as informações de cada propagandista para a camisa.</p>
+    </header>
+
+    <div class="info-box">
+      &#8505; Adicione quantos propagandistas forem necessários. Ao clicar em <strong>Enviar</strong>, tudo será salvo automaticamente.
+    </div>
+
+    <div class="section-block">
+      <p class="section-label">Dados do pedido</p>
+      <div class="card">
+        <div class="field">
+          <label for="nome-coordenador">Nome do coordenador</label>
+          <select id="nome-coordenador">
+            <option value="">Selecione o coordenador</option>
+          </select>
+          <p class="error-msg" id="err-coordenador">Selecione o coordenador.</p>
+        </div>
+        <div class="field">
+          <label for="nome-distribuidora">Nome da distribuidora</label>
+          <select id="nome-distribuidora">
+            <option value="">Selecione a distribuidora</option>
+          </select>
+          <p class="error-msg" id="err-distribuidora">Selecione a distribuidora.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-block">
+      <p class="section-label">Propagandistas</p>
+      <div id="prop-container"></div>
+      <button class="btn-add-prop" id="btn-add-prop">
+        <span style="font-size:1.1rem;">+</span> Adicionar propagandista
+      </button>
+    </div>
+
+    <button class="btn-submit" id="btn-submit">Enviar</button>
+    <div class="error-banner" id="error-banner">
+      &#9888; Não foi possível enviar. Verifique sua conexão e tente novamente.
+    </div>
+  </div>
+
+  <div class="success-screen" id="success-screen">
+    <div class="success-icon">&#10003;</div>
+    <h2>Enviado com sucesso!</h2>
+    <p id="success-detail">Seus dados foram salvos com sucesso. Obrigado!</p>
+    <button class="btn-novo" id="btn-baixar-comprovante" onclick="baixarComprovanteNovamente()">Baixar comprovante (PDF)</button>
+    <button class="btn-novo" onclick="resetForm()">Fazer novo envio</button>
+  </div>
+
+</div>
+
+<script>
+// ⚠️ COLE AQUI a URL do Apps Script que vai receber estes dados.
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxY4DEx2kZx9XzsQPbO-491obIpqy74iRkOkUT9MVv6_5hH89_QNBg6AcL8NUZ3hcUP/exec';
+
+const COORDENADORES = [
+  "ANDREZA VASCONCELOS",
+  "BARBARA COSTA",
+  "EDUARDO ABREU",
+  "ERICA CASTRO",
+  "ERIKA BATISTA",
+  "GLENDA CRISTO",
+  "ISABEL CRISTINA",
+  "MATHEUS MOTTA",
+  "SOFIA GALEGO",
+  "YASMIN NICOLA"
+];
+
+const DISTRIBUIDORAS = [
+  "AGROBICHO",
+  "AGROSUL",
+  "AMOEDO",
+  "ANIMAIS MF",
+  "ANIMALIA",
+  "BA HAO ABC/SP",
+  "BIOCOM",
+  "CENTRAL VETERINARIA",
+  "CENTROVET",
+  "CINOPLAN",
+  "COMPROMISSO",
+  "DIAMAJU PR",
+  "DIAMAJU RS",
+  "DISTAK PET",
+  "GARRA ANIMAL",
+  "HYPOLYTI",
+  "INDIANA",
+  "INOVACAO PET DISTRIB",
+  "J. HENRIQUE",
+  "JEAN PIERRE",
+  "KIPENZ",
+  "LYNKZ",
+  "MB CAMPINAS / VALINHOS",
+  "MONTE REAL",
+  "MOURAGRO",
+  "NORTVET",
+  "OLLEA",
+  "ONIVET",
+  "RIBER PET",
+  "SERRANA",
+  "SERV VET",
+  "SOMAVET",
+  "SULBIOLOGIC",
+  "SUPPLY PET",
+  "VENEZA",
+  "VET MED",
+  "VET VIDA",
+  "VETBAHIA",
+  "VETEC",
+  "VETS PET",
+  "VITRINEVET PI",
+  "ZAP ANIMAL",
+  "ZOOCENTER AM",
+  "ZOOCENTER PA",
+  "ZOOCENTER RR"
+];
+
+const TIPOS_CAMISA = ["Camiseta", "Baby Look"];
+const TAMANHOS = ["PP", "P", "M", "G", "GG"];
+
+let propCount = 0;
+
+/* ---------- CPF ---------- */
+function mascararCPF(valor) {
+  const d = valor.replace(/\D/g, '').slice(0, 11);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return d.slice(0, 3) + '.' + d.slice(3);
+  if (d.length <= 9) return d.slice(0, 3) + '.' + d.slice(3, 6) + '.' + d.slice(6);
+  return d.slice(0, 3) + '.' + d.slice(3, 6) + '.' + d.slice(6, 9) + '-' + d.slice(9);
+}
+
+function cpfValido(cpf) {
+  if (!/^\d{3}\.\d{3}\.\d{3}-\d{2}$/.test(cpf)) return false;
+  const d = cpf.replace(/\D/g, '');
+  if (/^(\d)\1{10}$/.test(d)) return false;
+  for (let t = 9; t < 11; t++) {
+    let soma = 0;
+    for (let i = 0; i < t; i++) soma += parseInt(d[i], 10) * (t + 1 - i);
+    const dv = ((soma * 10) % 11) % 10;
+    if (dv !== parseInt(d[t], 10)) return false;
+  }
+  return true;
+}
+
+/* ---------- Data ---------- */
+function hojeISO() {
+  const h = new Date();
+  const m = String(h.getMonth() + 1).padStart(2, '0');
+  const d = String(h.getDate()).padStart(2, '0');
+  return `${h.getFullYear()}-${m}-${d}`;
+}
+
+function dataValida(iso) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
+  return iso >= '1900-01-01' && iso <= hojeISO();
+}
+
+function isoParaBR(iso) {
+  const [a, m, d] = iso.split('-');
+  return `${d}/${m}/${a}`;
+}
+
+/* ---------- Linhas de propagandista ---------- */
+function opcoes(lista, placeholder) {
+  return `<option value="">${placeholder}</option>` +
+    lista.map(v => `<option value="${v}">${v}</option>`).join('');
+}
+
+function createPropRow() {
+  propCount++;
+  const uid = 'prop_' + Date.now() + '_' + propCount;
+  const row = document.createElement('div');
+  row.className = 'prop-row';
+  row.dataset.uid = uid;
+  row.innerHTML = `
+    <div class="prop-row-header">
+      <div class="prop-badge">
+        <span class="prop-num prop-num-label">${propCount}</span>
+        <span class="prop-title">Propagandista</span>
+      </div>
+      <button class="btn-remove-prop" title="Remover" onclick="removePropRow('${uid}')">&#215;</button>
+    </div>
+    <div class="prop-fields">
+      <div class="field">
+        <label>Nome do propagandista</label>
+        <input type="text" class="f-nome" placeholder="Nome completo" autocomplete="off" />
+        <p class="error-msg err-nome">Informe o nome do propagandista.</p>
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <label>CPF</label>
+          <input type="text" class="f-cpf" placeholder="000.000.000-00" inputmode="numeric" maxlength="14" autocomplete="off" />
+          <p class="error-msg err-cpf">Informe um CPF válido.</p>
+        </div>
+        <div class="field">
+          <label>Data de nascimento</label>
+          <input type="date" class="f-nasc" min="1900-01-01" max="${hojeISO()}" />
+          <p class="error-msg err-nasc">Informe uma data de nascimento válida.</p>
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <label>Tipo da camisa</label>
+          <select class="f-tipo">${opcoes(TIPOS_CAMISA, 'Selecione o tipo')}</select>
+          <p class="error-msg err-tipo">Selecione o tipo da camisa.</p>
+        </div>
+        <div class="field">
+          <label>Tamanho</label>
+          <select class="f-tam">${opcoes(TAMANHOS, 'Selecione o tamanho')}</select>
+          <p class="error-msg err-tam">Selecione o tamanho.</p>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const cpf = row.querySelector('.f-cpf');
+  cpf.addEventListener('input', () => {
+    cpf.value = mascararCPF(cpf.value);
+    if (cpf.classList.contains('invalid') && cpfValido(cpf.value)) setErro(cpf, row.querySelector('.err-cpf'), false);
+  });
+
+  // limpa o erro assim que o campo for corrigido
+  [['.f-nome', '.err-nome'], ['.f-nasc', '.err-nasc'], ['.f-tipo', '.err-tipo'], ['.f-tam', '.err-tam']].forEach(([c, e]) => {
+    const el = row.querySelector(c);
+    el.addEventListener('input', () => { if (el.value) setErro(el, row.querySelector(e), false); });
+  });
+
+  return row;
+}
+
+function removePropRow(uid) {
+  document.querySelector(`[data-uid="${uid}"]`).remove();
+  document.querySelectorAll('.prop-row').forEach((r, i) => {
+    r.querySelector('.prop-num-label').textContent = i + 1;
+  });
+}
+
+function setErro(input, msgEl, mostrar) {
+  input.classList.toggle('invalid', mostrar);
+  msgEl.style.display = mostrar ? 'block' : 'none';
+}
+
+document.getElementById('btn-add-prop').addEventListener('click', () => {
+  const nova = createPropRow();
+  document.getElementById('prop-container').appendChild(nova);
+  nova.querySelector('.f-nome').focus();
+});
+
+document.getElementById('btn-submit').addEventListener('click', submitForm);
+
+/* ---------- Comprovante PDF ---------- */
+let ultimoEnvio = null;
+
+function gerarComprovantePDF({ coordenador, distribuidora, propagandistas }) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const marginX = 40;
+  let y = 50;
+
+  const agora = new Date();
+  const dataHora = agora.toLocaleString('pt-BR');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.text('Comprovante - Camisas Propagandistas', marginX, y);
+  y += 20;
+
+  doc.setDrawColor(200);
+  doc.line(marginX, y, pageWidth - marginX, y);
+  y += 25;
+
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Coordenador:', marginX, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(coordenador, marginX + 100, y);
+  y += 18;
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Distribuidora:', marginX, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(distribuidora, marginX + 100, y);
+  y += 18;
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Data/Hora:', marginX, y);
+  doc.setFont('helvetica', 'normal');
+  doc.text(dataHora, marginX + 100, y);
+  y += 30;
+
+  const colNome = marginX + 20;
+  const colCPF = 245;
+  const colNasc = 335;
+  const colTipo = 410;
+  const colTam = pageWidth - marginX;
+
+  function cabecalho() {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('#', marginX, y);
+    doc.text('Propagandista', colNome, y);
+    doc.text('CPF', colCPF, y);
+    doc.text('Nascimento', colNasc, y);
+    doc.text('Camisa', colTipo, y);
+    doc.text('Tam.', colTam, y, { align: 'right' });
+    y += 8;
+    doc.setDrawColor(200);
+    doc.line(marginX, y, pageWidth - marginX, y);
+    y += 14;
+    doc.setFont('helvetica', 'normal');
+  }
+
+  cabecalho();
+
+  propagandistas.forEach((p, i) => {
+    const nomeLinhas = doc.splitTextToSize(p.nome, colCPF - colNome - 10);
+
+    if (y + nomeLinhas.length * 12 > 780) {
+      doc.addPage();
+      y = 50;
+      cabecalho();
+    }
+
+    doc.text(String(i + 1), marginX, y);
+    doc.text(nomeLinhas, colNome, y);
+    doc.text(p.cpf, colCPF, y);
+    doc.text(p.dataNascimento, colNasc, y);
+    doc.text(p.tipoCamisa, colTipo, y);
+    doc.text(p.tamanho, colTam, y, { align: 'right' });
+
+    y += nomeLinhas.length * 12 + 6;
+  });
+
+  y += 10;
+  doc.setDrawColor(200);
+  doc.line(marginX, y, pageWidth - marginX, y);
+  y += 22;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(12);
+  doc.text('Total de propagandistas:', marginX, y);
+  doc.text(String(propagandistas.length), pageWidth - marginX, y, { align: 'right' });
+
+  const nomeArquivo = `comprovante_${distribuidora.replace(/[^\w]+/g, '_')}_${agora.getTime()}.pdf`;
+  doc.save(nomeArquivo);
+}
+
+function baixarComprovanteNovamente() {
+  if (ultimoEnvio) gerarComprovantePDF(ultimoEnvio);
+}
+
+/* ---------- Envio ---------- */
+async function submitForm() {
+  let valid = true;
+
+  const coordenadorInput = document.getElementById('nome-coordenador');
+  const distribuidoraInput = document.getElementById('nome-distribuidora');
+
+  const okCoord = !!coordenadorInput.value.trim();
+  setErro(coordenadorInput, document.getElementById('err-coordenador'), !okCoord);
+  if (!okCoord) valid = false;
+
+  const okDist = !!distribuidoraInput.value.trim();
+  setErro(distribuidoraInput, document.getElementById('err-distribuidora'), !okDist);
+  if (!okDist) valid = false;
+
+  const rows = document.querySelectorAll('.prop-row');
+  if (!rows.length) { alert('Adicione ao menos um propagandista.'); return; }
+
+  const propagandistas = [];
+  const cpfsVistos = new Set();
+
+  rows.forEach(row => {
+    const nome = row.querySelector('.f-nome');
+    const cpf = row.querySelector('.f-cpf');
+    const nasc = row.querySelector('.f-nasc');
+    const tipo = row.querySelector('.f-tipo');
+    const tam = row.querySelector('.f-tam');
+    const errCpf = row.querySelector('.err-cpf');
+
+    const okNome = !!nome.value.trim();
+    const okCpf = cpfValido(cpf.value);
+    const okNasc = dataValida(nasc.value);
+    const okTipo = !!tipo.value;
+    const okTam = !!tam.value;
+
+    setErro(nome, row.querySelector('.err-nome'), !okNome);
+    setErro(nasc, row.querySelector('.err-nasc'), !okNasc);
+    setErro(tipo, row.querySelector('.err-tipo'), !okTipo);
+    setErro(tam, row.querySelector('.err-tam'), !okTam);
+
+    let cpfOk = okCpf;
+    if (okCpf && cpfsVistos.has(cpf.value)) {
+      errCpf.textContent = 'Este CPF já foi informado acima.';
+      cpfOk = false;
+    } else {
+      errCpf.textContent = 'Informe um CPF válido.';
+    }
+    setErro(cpf, errCpf, !cpfOk);
+    if (okCpf) cpfsVistos.add(cpf.value);
+
+    if (!(okNome && cpfOk && okNasc && okTipo && okTam)) {
+      valid = false;
+    } else {
+      propagandistas.push({
+        nome: nome.value.trim(),
+        cpf: cpf.value,
+        dataNascimento: isoParaBR(nasc.value),
+        tipoCamisa: tipo.value,
+        tamanho: tam.value
+      });
+    }
+  });
+
+  if (!valid) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+
+  const btn = document.getElementById('btn-submit');
+  const errorBanner = document.getElementById('error-banner');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Enviando...';
+  errorBanner.style.display = 'none';
+
+  const dados = {
+    coordenador: coordenadorInput.value.trim(),
+    distribuidora: distribuidoraInput.value.trim(),
+    propagandistas
+  };
+
+  try {
+    if (!SCRIPT_URL.startsWith('https://')) throw new Error('SCRIPT_URL não configurada');
+
+    // Envia como texto simples: assim o navegador deixa ler a resposta do Apps Script
+    const resp = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify(dados)
+    });
+    const texto = (await resp.text()).trim();
+    if (texto !== 'ok') {
+      let r;
+      try { r = JSON.parse(texto); } catch (e) { throw new Error('Resposta inesperada do servidor'); }
+      if (!r.ok) throw new Error(r.erro || 'Erro ao salvar');
+    }
+
+    const n = propagandistas.length;
+    document.getElementById('success-detail').textContent =
+      `${dados.coordenador}, ${n} propagandista${n > 1 ? 's foram registrados' : ' foi registrado'} para ${dados.distribuidora}.`;
+    document.getElementById('form-section').style.display = 'none';
+    document.getElementById('success-screen').style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    ultimoEnvio = dados;
+    btn.disabled = false;
+    btn.innerHTML = 'Enviar';
+
+  } catch (err) {
+    btn.disabled = false;
+    btn.innerHTML = 'Enviar';
+    errorBanner.innerHTML = '&#9888; Não foi possível enviar: ' + err.message + '. Verifique sua conexão e tente novamente.';
+    errorBanner.style.display = 'block';
+  }
+}
+
+function resetForm() {
+  document.getElementById('nome-coordenador').value = '';
+  document.getElementById('nome-distribuidora').value = '';
+  document.getElementById('prop-container').innerHTML = '';
+  propCount = 0;
+  document.getElementById('prop-container').appendChild(createPropRow());
+  document.getElementById('form-section').style.display = 'block';
+  document.getElementById('success-screen').style.display = 'none';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function carregarListas() {
+  const coord = document.getElementById('nome-coordenador');
+  COORDENADORES.forEach(item => {
+    coord.innerHTML += `<option value="${item}">${item}</option>`;
+  });
+
+  const dist = document.getElementById('nome-distribuidora');
+  DISTRIBUIDORAS.forEach(item => {
+    dist.innerHTML += `<option value="${item}">${item}</option>`;
+  });
+
+  [['nome-coordenador', 'err-coordenador'], ['nome-distribuidora', 'err-distribuidora']].forEach(([id, err]) => {
+    const el = document.getElementById(id);
+    el.addEventListener('change', () => { if (el.value) setErro(el, document.getElementById(err), false); });
+  });
+}
+
+carregarListas();
+document.getElementById('prop-container').appendChild(createPropRow());
+</script>
+</body>
+</html>
