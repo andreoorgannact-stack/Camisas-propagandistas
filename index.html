@@ -170,6 +170,29 @@
   .prop-fields .field { margin-bottom: 0.9rem; }
   .prop-fields .field:last-child { margin-bottom: 0; }
 
+  .chk-contratacao {
+    display: flex; align-items: center; gap: 0.45rem;
+    margin-top: 0.5rem;
+    font-family: 'Arial', sans-serif;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+  }
+  .chk-contratacao input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+  .aviso-contratacao {
+    display: none;
+    background: var(--accent-light);
+    border-radius: var(--radius-sm);
+    padding: 0.6rem 0.85rem;
+    font-family: 'Arial', sans-serif;
+    font-size: 0.78rem;
+    color: var(--accent-dark);
+    line-height: 1.5;
+  }
+  .prop-row.em-contratacao .dados-pessoais { display: none; }
+  .prop-row.em-contratacao .aviso-contratacao { display: block; }
+
   .field-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -434,6 +457,8 @@ const DISTRIBUIDORAS = [
 const TIPOS_CAMISA = ["Camiseta", "Baby Look"];
 const TAMANHOS = ["PP", "P", "M", "G", "GG"];
 
+const NOME_CONTRATACAO = "EM CONTRATAÇÃO";
+
 let propCount = 0;
 
 /* ---------- CPF ---------- */
@@ -501,7 +526,12 @@ function createPropRow() {
         <label>Nome do propagandista</label>
         <input type="text" class="f-nome" placeholder="Nome completo" autocomplete="off" />
         <p class="error-msg err-nome">Informe o nome do propagandista.</p>
+        <label class="chk-contratacao">
+          <input type="checkbox" class="f-contratacao" /> Ainda em contratação
+        </label>
       </div>
+      <p class="aviso-contratacao">Será registrado como <strong>EM CONTRATAÇÃO</strong> para a distribuidora selecionada. Não é preciso informar CPF, nascimento nem camisa.</p>
+      <div class="dados-pessoais">
       <div class="field-grid">
         <div class="field">
           <label>CPF</label>
@@ -526,6 +556,7 @@ function createPropRow() {
           <p class="error-msg err-tam">Selecione o tamanho.</p>
         </div>
       </div>
+      </div>
     </div>
   `;
 
@@ -533,6 +564,24 @@ function createPropRow() {
   cpf.addEventListener('input', () => {
     cpf.value = mascararCPF(cpf.value);
     if (cpf.classList.contains('invalid') && cpfValido(cpf.value)) setErro(cpf, row.querySelector('.err-cpf'), false);
+  });
+
+  // "Ainda em contratação": troca o nome por EM CONTRATAÇÃO e esconde os demais campos
+  const chk = row.querySelector('.f-contratacao');
+  const nomeEl = row.querySelector('.f-nome');
+  chk.addEventListener('change', () => {
+    row.classList.toggle('em-contratacao', chk.checked);
+    if (chk.checked) {
+      nomeEl.dataset.nomeAnterior = nomeEl.value;
+      nomeEl.value = NOME_CONTRATACAO;
+      nomeEl.disabled = true;
+      row.querySelectorAll('.invalid').forEach(el => el.classList.remove('invalid'));
+      row.querySelectorAll('.error-msg').forEach(el => { el.style.display = 'none'; });
+    } else {
+      nomeEl.value = nomeEl.dataset.nomeAnterior || '';
+      nomeEl.disabled = false;
+      nomeEl.focus();
+    }
   });
 
   // limpa o erro assim que o campo for corrigido
@@ -640,10 +689,10 @@ function gerarComprovantePDF({ coordenador, distribuidora, propagandistas }) {
 
     doc.text(String(i + 1), marginX, y);
     doc.text(nomeLinhas, colNome, y);
-    doc.text(p.cpf, colCPF, y);
-    doc.text(p.dataNascimento, colNasc, y);
-    doc.text(p.tipoCamisa, colTipo, y);
-    doc.text(p.tamanho, colTam, y, { align: 'right' });
+    doc.text(p.cpf || '-', colCPF, y);
+    doc.text(p.dataNascimento || '-', colNasc, y);
+    doc.text(p.tipoCamisa || '-', colTipo, y);
+    doc.text(p.tamanho || '-', colTam, y, { align: 'right' });
 
     y += nomeLinhas.length * 12 + 6;
   });
@@ -694,6 +743,17 @@ async function submitForm() {
     const tipo = row.querySelector('.f-tipo');
     const tam = row.querySelector('.f-tam');
     const errCpf = row.querySelector('.err-cpf');
+
+    if (row.querySelector('.f-contratacao').checked) {
+      propagandistas.push({
+        nome: NOME_CONTRATACAO,
+        cpf: '',
+        dataNascimento: '',
+        tipoCamisa: '',
+        tamanho: ''
+      });
+      return;
+    }
 
     const okNome = !!nome.value.trim();
     const okCpf = cpfValido(cpf.value);
